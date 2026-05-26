@@ -1,0 +1,8 @@
+Fecha:               2026-05-25 17:29:09 Hora est. Pacífico, Sudamérica
+Python:              3.14.5
+Plataforma:          Windows-11-10.0.26200-SP0
+Arquitectura:        AMD64
+Procesador:          Intel64 Family 6 Model 151 Stepping 2, GenuineIntel
+CPU lógicos:         12
+Frecuencia CPU:      2400 MHz (min 0 / max 2400)
+RAM total:           23.7 GiB

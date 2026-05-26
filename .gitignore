@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*~
+
+# Resultados experimentales (regenerables con run_experiments.py)
+# Mantener esta línea comentada si SÍ quieren versionar los resultados
+# de la corrida final que va con la entrega.
+# results/
+
+# Sistema
+.DS_Store
+Thumbs.db
