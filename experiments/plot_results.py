@@ -232,6 +232,64 @@ def plot_hamming() -> None:
     _save(fig, "fig4_hamming")
 
 
+def plot_special_exponents() -> None:
+    csv_path = RESULTS_DIR / "special_exponents.csv"
+    if not csv_path.exists():
+        print(f"    (saltada: {csv_path} no existe)")
+        return
+    df = pd.read_csv(csv_path)
+    bit_size = int(df["bit_size"].iloc[0])
+
+    agg = df.groupby(["exponent_type", "algorithm", "k"], dropna=False).agg(
+        mean_ops=("total_ops", "mean"),
+        mean_mul=("multiplications", "mean"),
+    ).reset_index()
+
+    # Orden descriptivo para el eje x
+    order = ["rsa_3", "rsa_65537", "power_of_2", "all_ones", "random"]
+    labels = {
+        "rsa_3":       "e=3\n(RSA, H=2)",
+        "rsa_65537":   "e=65537\n(RSA, H=2)",
+        "power_of_2":  "2^β\n(H=1)",
+        "all_ones":    "2^β−1\n(H=β)",
+        "random":      "Aleatorio\n(H≈β/2)",
+    }
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    x = range(len(order))
+    width = 0.18
+    offsets = {"binary_lr": -2, "binary_rl": -1, "kary": 0, "sliding": 1}
+    k_show = {"kary": 6, "sliding": 6}
+
+    for algo, offset in offsets.items():
+        if algo in k_show:
+            sub = agg[(agg["algorithm"] == algo) & (agg["k"] == k_show[algo])]
+        else:
+            sub = agg[(agg["algorithm"] == algo) & (agg["k"].isna() | (agg["k"] == ""))]
+
+        vals = [
+            sub[sub["exponent_type"] == exp]["mean_ops"].values[0]
+            if len(sub[sub["exponent_type"] == exp]) > 0 else 0
+            for exp in order
+        ]
+        st = STYLES[algo]
+        label = st["label"] + (f" (k=6)" if algo in k_show else "")
+        ax.bar([xi + offset * width for xi in x], vals,
+               width=width, color=st["color"], label=label, alpha=0.85)
+
+    ax.set_xticks(list(x))
+    ax.set_xticklabels([labels[e] for e in order], fontsize=9)
+    ax.set_ylabel("Operaciones modulares totales (promedio)")
+    ax.set_title(
+        f"Figura 5. Operaciones por tipo de exponente "
+        f"($\\beta$ = {bit_size} bits del módulo)"
+    )
+    ax.legend(loc="upper left")
+    ax.grid(True, axis="y", alpha=0.3)
+
+    _save(fig, "fig5_special_exponents")
+
+
 # ---------------------------------------------------------------------------
 # Tabla resumen
 # ---------------------------------------------------------------------------
@@ -292,6 +350,7 @@ def main() -> None:
     plot_window_size()
     plot_timing()
     plot_hamming()
+    plot_special_exponents()
     print("\nTablas resumen:")
     print_summary_tables()
     print(f"\nTodas las figuras en: {FIGURES_DIR}")

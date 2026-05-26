@@ -11,7 +11,7 @@ seguidos de una multiplicación por T[w].
 
 Costo (multiplicaciones modulares):
     - Precomputación: 2^k − 2.
-    - Núcleo del bucle: β cuadrados + ⌈β/k⌉ − 1 multiplicaciones.
+    - Núcleo del bucle: β cuadrados + (ventanas con w ≠ 0) multiplicaciones.
     - Total: β + ⌈β/k⌉ + 2^k − 2 operaciones, aprox.
 
 El tamaño óptimo de ventana minimiza el total y se aproxima por
@@ -87,13 +87,13 @@ def kary_modexp(
                 result = counter.sqr(result, n)
             else:
                 result = (result * result) % n
-        # Multiplicación por T[w]. En la versión estricta del libro se
-        # multiplica incluso cuando w == 0 (resultado·1). Esta variante
-        # incluye esa multiplicación "desperdiciada" para reflejar
-        # fielmente el algoritmo; la versión skip-zero es una
-        # optimización que tiende hacia ventana deslizante.
-        if counter is not None:
-            result = counter.mul(result, table[w], n)
-        else:
-            result = (result * table[w]) % n
+        # Multiplicación por T[w]. Se omite cuando w == 0 (T[0] = 1)
+        # porque multiplicar por 1 no cambia el resultado.
+        # Esto hace que el conteo coincida con la fórmula del HAC §14.6:
+        # β + ⌈β/k⌉ + 2^k − 2 operaciones.
+        if w != 0:    
+            if counter is not None:
+                result = counter.mul(result, table[w], n)
+            else:
+                result = (result * table[w]) % n
     return result

@@ -323,6 +323,94 @@ def experiment_hamming(
         rows,
     )
 
+# ---------------------------------------------------------------------------
+# Experimento 5 — Exponentes con estructura especial
+# ---------------------------------------------------------------------------
+
+def experiment_special_exponents(
+    output_path: Path,
+    bit_size: int = 1024,
+    samples: int = 20,
+    seed: int = 2026,
+) -> None:
+    """
+    Compara el conteo de operaciones para exponentes con estructura especial
+    vs. exponentes aleatorios del mismo tamaño en bits.
+
+    Exponentes estudiados:
+      - RSA clásico:   e = 65537 = 2^16 + 1  (H=2, β=17)
+      - Potencia de 2: e = 2^(β-1)           (H=1, β=bit_size)
+      - Todo unos:     e = 2^β - 1            (H=β, β=bit_size)
+      - Aleatorio:     e aleatorio de β bits  (H≈β/2)
+
+    El módulo n y la base a se generan aleatoriamente (bit_size bits) para
+    que los resultados no dependan de valores particulares de n.
+    """
+    rng = random.Random(seed)
+
+    special_exponents = {
+        "rsa_65537":   65537,                      # 2^16 + 1, H=2
+        "rsa_3":       3,                          # 2^1  + 1, H=2
+        "power_of_2":  1 << (bit_size - 1),        # 2^(β-1), H=1
+        "all_ones":    (1 << bit_size) - 1,        # H=β
+    }
+
+    rows = []
+    for sample_idx in range(samples):
+        # Módulo y base aleatorios de bit_size bits
+        n = (rng.getrandbits(bit_size) | (1 << (bit_size - 1))) | 1
+        a = rng.randrange(1, n)
+        # Exponente aleatorio de referencia
+        b_random = rng.getrandbits(bit_size) | (1 << (bit_size - 1))
+        current_exponents = {
+            **special_exponents,
+            "random": b_random,
+        }
+
+        for exp_name, b in current_exponents.items():
+            hamming = bin(b).count("1")
+            beta    = b.bit_length()
+
+            def record(algo_name, k_param, counter):
+                rows.append({
+                    "bit_size":      bit_size,
+                    "exponent_type": exp_name,
+                    "hamming_weight": hamming,
+                    "beta":          beta,
+                    "algorithm":     algo_name,
+                    "k":             k_param if k_param is not None else "",
+                    "sample":        sample_idx,
+                    "multiplications": counter.multiplications,
+                    "squarings":     counter.squarings,
+                    "total_ops":     counter.total,
+                })
+
+            for name, fn in [
+                ("binary_lr", binary_lr_modexp),
+                ("binary_rl", binary_rl_modexp),
+            ]:
+                c = OpCounter()
+                fn(a, b, n, counter=c)
+                record(name, None, c)
+
+            for k in [4, 6]:
+                for name, fn in [
+                    ("kary",    kary_modexp),
+                    ("sliding", sliding_window_modexp),
+                ]:
+                    c = OpCounter()
+                    fn(a, b, n, k=k, counter=c)
+                    record(name, k, c)
+
+    write_csv(
+        output_path,
+        ["bit_size", "exponent_type", "hamming_weight", "beta",
+         "algorithm", "k", "sample", "multiplications", "squarings", "total_ops"],
+        rows,
+    )
+
+
+
 
 # ---------------------------------------------------------------------------
 # Captura de información del sistema
@@ -374,9 +462,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--experiment",
-        choices=["scaling", "window", "timing", "hamming", "all"],
+        choices=["scaling", "window", "timing", "hamming", "special", "all"],
         default="all",
     )
+    
     parser.add_argument("--samples", type=int, default=20)
     parser.add_argument("--quick", action="store_true",
                         help="Muestras reducidas y tamaños menores")
@@ -403,12 +492,12 @@ def main() -> None:
         print("MODO RÁPIDO activado.")
     print()
 
-    print("[0/4] Información del sistema")
+    print("[0/5] Información del sistema")
     capture_system_info(results_dir / "system_info.txt")
     print()
 
     if args.experiment in ("scaling", "all"):
-        print("[1/4] Experimento de escalabilidad...")
+        print("[1/5] Experimento de escalabilidad...")
         experiment_scaling(
             results_dir / "scaling.csv",
             samples=samples,
@@ -418,7 +507,7 @@ def main() -> None:
         print()
 
     if args.experiment in ("window", "all"):
-        print("[2/4] Experimento de tamaño de ventana...")
+        print("[2/5] Experimento de tamaño de ventana...")
         experiment_window_size(
             results_dir / "window_size.csv",
             bit_size=1024 if args.quick else 2048,
@@ -427,8 +516,9 @@ def main() -> None:
         )
         print()
 
+
     if args.experiment in ("timing", "all"):
-        print("[3/4] Experimento de tiempo de ejecución...")
+        print("[3/5] Experimento de tiempo de ejecución...")
         experiment_timing(
             results_dir / "timing.csv",
             samples=max(3, samples // 2),
@@ -438,9 +528,19 @@ def main() -> None:
         print()
 
     if args.experiment in ("hamming", "all"):
-        print("[4/4] Experimento de peso de Hamming...")
+        print("[4/5] Experimento de peso de Hamming...")
         experiment_hamming(
             results_dir / "hamming.csv",
+            bit_size=1024,
+            samples=samples,
+            seed=args.seed,
+        )
+        print()
+
+    if args.experiment in ("special", "all"):
+        print("[5/5] Experimento de exponentes especiales...")
+        experiment_special_exponents(
+            results_dir / "special_exponents.csv",
             bit_size=1024,
             samples=samples,
             seed=args.seed,
