@@ -107,12 +107,13 @@ python experiments/run_experiments.py --quick    # ~1 min, muestras reducidas
 python experiments/plot_results.py
 ```
 
-Cuatro experimentos se ejecutan en orden:
+Cinco experimentos se ejecutan en orden:
 
 1. **scaling** — operaciones vs. tamaño del exponente β ∈ {8, 16, ..., 4096}.
 2. **window_size** — operaciones vs. k para β fijo (2048 bits).
 3. **timing** — tiempo de ejecución vs. β, incluyendo `pow()` como referencia.
 4. **hamming** — efecto del peso de Hamming H(b) sobre el conteo.
+5. **special_exponents** — Compara el conteo de operaciones para exponentes con estructura especial vs. exponentes aleatorios del mismo tamaño en bits.
 
 Cada experimento se puede correr aisladamente con `--experiment <nombre>`.
 Todos los archivos producidos quedan en `results/` y el sistema captura
